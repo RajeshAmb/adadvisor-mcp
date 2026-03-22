@@ -296,11 +296,8 @@ def get_recommendations(date_preset: str = "last_3d") -> str:
     return "\n".join(lines)
 
 
+# ASGI app for deployment (uvicorn mcp_server:app)
+app = mcp.sse_app()
+
 if __name__ == "__main__":
-    transport = os.environ.get("MCP_TRANSPORT", "stdio")
-    if transport == "sse":
-        import uvicorn
-        port = int(os.environ.get("PORT", 8000))
-        uvicorn.run(mcp.sse_app(), host="0.0.0.0", port=port)
-    else:
-        mcp.run(transport="stdio")
+    mcp.run(transport="stdio")
