@@ -15,6 +15,8 @@ from facebook_business.api import FacebookAdsApi
 from facebook_business.adobjects.adaccount import AdAccount
 from facebook_business.adobjects.campaign import Campaign
 from facebook_business.adobjects.adset import AdSet
+from facebook_business.adobjects.ad import Ad
+from facebook_business.adobjects.adcreative import AdCreative
 
 mcp = FastMCP(
     "Meta Ads – Mangalya Matrimony",
@@ -300,6 +302,144 @@ def get_recommendations(date_preset: str = "last_3d") -> str:
         lines.append("\nAll campaigns are performing within acceptable range.")
 
     return "\n".join(lines)
+
+
+# ── Indian state & language mappings ───────────────────────────────────────────
+_STATE_KEYS = {
+    "kerala": "2562", "andhra pradesh": "2561", "telangana": "3781",
+    "karnataka": "2563", "tamil nadu": "2564", "maharashtra": "2565",
+    "west bengal": "2566", "gujarat": "2567", "rajasthan": "2568",
+    "uttar pradesh": "2569", "punjab": "2570", "haryana": "2571",
+    "delhi": "2572", "madhya pradesh": "2573", "odisha": "2574",
+}
+_LANG_CODES = {
+    "malayalam": 24, "telugu": 56, "kannada": 17, "tamil": 28,
+    "hindi": 6, "bengali": 31, "marathi": 51, "gujarati": 20,
+    "punjabi": 57, "odia": 55,
+}
+
+PAGE_ID  = "1053689994488653"
+PIXEL_ID = "965010763370621"
+
+
+@mcp.tool()
+def create_campaign(name: str, objective: str = "OUTCOME_LEADS") -> str:
+    """Create a new PAUSED campaign.
+
+    Args:
+        name: Campaign name (e.g. "Mangalya-Karnataka-01")
+        objective: OUTCOME_LEADS, OUTCOME_TRAFFIC, OUTCOME_AWARENESS, OUTCOME_ENGAGEMENT
+    """
+    account = _init()
+    campaign = account.create_campaign(fields=[], params={
+        Campaign.Field.name: name,
+        Campaign.Field.objective: objective,
+        Campaign.Field.status: "PAUSED",
+        Campaign.Field.special_ad_categories: [],
+    })
+    return f"Campaign created: {campaign['id']} — {name} ({objective}) [PAUSED]"
+
+
+@mcp.tool()
+def create_adset(
+    campaign_id: str,
+    name: str,
+    daily_budget_rupees: float,
+    states: list,
+    gender: str = "female",
+    age_min: int = 23,
+    age_max: int = 33,
+    languages: list = None,
+) -> str:
+    """Create a new PAUSED ad set with Indian state targeting optimized for CompleteRegistration.
+
+    Args:
+        campaign_id: Parent campaign ID
+        name: Ad set name (e.g. "Karnataka Women 23-33")
+        daily_budget_rupees: Daily budget in Rupees (e.g. 200)
+        states: Indian state names (e.g. ["Karnataka", "Tamil Nadu"])
+        gender: "female", "male", or "all"
+        age_min: Minimum age (default 23)
+        age_max: Maximum age (default 33)
+        languages: Language names (e.g. ["Kannada", "Tamil"]) — optional
+    """
+    account = _init()
+
+    regions = [
+        {"key": _STATE_KEYS[s.lower()], "name": s, "country": "IN"}
+        for s in states if s.lower() in _STATE_KEYS
+    ]
+    geo = {"regions": regions} if regions else {"countries": ["IN"]}
+
+    targeting = {
+        "geo_locations": geo,
+        "age_min": age_min,
+        "age_max": age_max,
+    }
+    if gender == "female":
+        targeting["genders"] = [2]
+    elif gender == "male":
+        targeting["genders"] = [1]
+    if languages:
+        ids = [_LANG_CODES[l.lower()] for l in languages if l.lower() in _LANG_CODES]
+        if ids:
+            targeting["locales"] = ids
+
+    adset = account.create_ad_set(fields=[], params={
+        AdSet.Field.name: name,
+        AdSet.Field.campaign_id: campaign_id,
+        AdSet.Field.daily_budget: int(daily_budget_rupees * 100),
+        AdSet.Field.billing_event: "IMPRESSIONS",
+        AdSet.Field.optimization_goal: "OFFSITE_CONVERSIONS",
+        AdSet.Field.targeting: targeting,
+        AdSet.Field.status: "PAUSED",
+        AdSet.Field.bid_strategy: "LOWEST_COST_WITHOUT_CAP",
+        AdSet.Field.promoted_object: {
+            "page_id": PAGE_ID,
+            "pixel_id": PIXEL_ID,
+            "custom_event_type": "COMPLETE_REGISTRATION",
+        },
+    })
+
+    lang_str = ", ".join(languages) if languages else "Any"
+    return (
+        f"Ad set created: {adset['id']} — {name} [PAUSED]\n"
+        f"  States   : {', '.join(states)}\n"
+        f"  Gender   : {gender} | Age: {age_min}-{age_max}\n"
+        f"  Languages: {lang_str}\n"
+        f"  Budget   : Rs.{daily_budget_rupees:.0f}/day"
+    )
+
+
+@mcp.tool()
+def get_creatives() -> str:
+    """List all ad creatives in the account with their IDs."""
+    account = _init()
+    creatives = account.get_ad_creatives(fields=[
+        AdCreative.Field.id,
+        AdCreative.Field.name,
+    ])
+    lines = [f"{c['id']} — {c.get('name', 'N/A')}" for c in creatives]
+    return "\n".join(lines) if lines else "No creatives found."
+
+
+@mcp.tool()
+def create_ad(adset_id: str, creative_id: str, name: str) -> str:
+    """Create a new PAUSED ad using an existing creative.
+
+    Args:
+        adset_id: Ad set ID to place the ad in
+        creative_id: Creative ID — use get_creatives to find IDs
+        name: Ad name (e.g. "Mangalya-Karnataka-01-ad")
+    """
+    account = _init()
+    ad = account.create_ad(fields=[], params={
+        Ad.Field.name: name,
+        Ad.Field.adset_id: adset_id,
+        Ad.Field.creative: {"creative_id": creative_id},
+        Ad.Field.status: "PAUSED",
+    })
+    return f"Ad created: {ad['id']} — {name} [PAUSED]"
 
 
 # ASGI app for deployment (uvicorn mcp_server:app)
