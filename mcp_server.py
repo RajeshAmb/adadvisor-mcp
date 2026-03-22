@@ -297,7 +297,7 @@ def get_recommendations(date_preset: str = "last_3d") -> str:
 
 
 # ASGI app for deployment (uvicorn mcp_server:app)
-app = mcp.sse_app()
+app = mcp.streamable_http_app()
 
 if __name__ == "__main__":
     mcp.run(transport="stdio")
