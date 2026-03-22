@@ -307,7 +307,7 @@ def get_recommendations(date_preset: str = "last_3d") -> str:
 # ── Indian state & language mappings ───────────────────────────────────────────
 _STATE_KEYS = {
     "kerala": "2562", "andhra pradesh": "2561", "telangana": "3781",
-    "karnataka": "2563", "tamil nadu": "2564", "maharashtra": "2565",
+    "karnataka": "2563", "tamil nadu": "1744", "maharashtra": "2565",
     "west bengal": "2566", "gujarat": "2567", "rajasthan": "2568",
     "uttar pradesh": "2569", "punjab": "2570", "haryana": "2571",
     "delhi": "2572", "madhya pradesh": "2573", "odisha": "2574",
