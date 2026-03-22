@@ -168,6 +168,7 @@ ADSETS = [
     {"adset_id": "120265153511970555", "name": "AP Telangana Women 23-33 (Lead v2)"},
     {"adset_id": "120265153509550555", "name": "Kerala Women 23-33 (Lead)"},
     {"adset_id": "120265153513430555", "name": "Tamil Nadu Women 23-33 (Lead)"},
+    {"adset_id": "120265154082460555", "name": "Telugu Parents Campaign 38-58 (Lead)"},
 ]
 
 
