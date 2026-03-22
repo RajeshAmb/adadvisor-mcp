@@ -18,23 +18,26 @@ from facebook_business.adobjects.adset import AdSet
 FacebookAdsApi.init(config.APP_ID, config.APP_SECRET, config.ACCESS_TOKEN)
 
 ADSETS = [
-    {"adset_id": "120265076173980555", "name": "mangalya-03 (Kerala)"},
-    {"adset_id": "120265076175510555", "name": "Mangalya-01 (AP & Telangana)"},
+    {"adset_id": "120265125537550555", "name": "Telugu Parents 45-65 (Lead)"},
+    {"adset_id": "120265125536690555", "name": "Telugu Women 23-33 (Lead)"},
+    {"adset_id": "120265153511970555", "name": "AP Telangana Women 23-33 (Lead v2)"},
+    {"adset_id": "120265153509550555", "name": "Kerala Women 23-33 (Lead)"},
+    {"adset_id": "120265153513430555", "name": "Tamil Nadu Women 23-33 (Lead)"},
 ]
 
 FIELDS = ["impressions", "clicks", "spend", "ctr", "actions"]
 
 MIN_CTR              = 0.5
-MAX_COST_PER_SIGNUP  = 150
-GOOD_COST_PER_SIGNUP = 50
-MIN_SIGNUPS_TO_SCALE = 3
+MAX_COST_PER_LEAD    = 100
+GOOD_COST_PER_LEAD   = 40
+MIN_LEADS_TO_SCALE   = 3
 
 
-def get_signups(actions):
+def get_leads(actions):
     if not actions:
         return 0
     for a in actions:
-        if a.get("action_type") == "complete_registration":
+        if a.get("action_type") == "lead":
             return int(a.get("value", 0))
     return 0
 
@@ -61,10 +64,10 @@ def optimize(camp):
     impressions = int(row.get("impressions", 0))
     spend       = float(row.get("spend", 0))
     ctr         = float(row.get("ctr", 0))
-    signups     = get_signups(row.get("actions"))
-    cps         = spend / signups if signups > 0 else None
+    leads       = get_leads(row.get("actions"))
+    cpl         = spend / leads if leads > 0 else None
 
-    print(f"    Impressions: {impressions} | CTR: {ctr:.2f}% | Spend: Rs.{spend:.2f} | Signups: {signups} | Cost/Signup: {'Rs.'+str(round(cps,2)) if cps else 'N/A'}")
+    print(f"    Impressions: {impressions} | CTR: {ctr:.2f}% | Spend: Rs.{spend:.2f} | Leads: {leads} | Cost/Lead: {'Rs.'+str(round(cpl,2)) if cpl else 'N/A'}")
 
     if impressions == 0:
         print("    ACTION: No impressions — check ad approval status.")
@@ -75,13 +78,13 @@ def optimize(camp):
         print(f"    ACTION: PAUSED — CTR {ctr:.2f}% below {MIN_CTR}%. Review creative.")
         return
 
-    if cps and cps > MAX_COST_PER_SIGNUP:
-        adjust_budget(camp["adset_id"], current_budget, 0.75, f"Cost/Signup Rs.{cps:.0f} too high")
+    if cpl and cpl > MAX_COST_PER_LEAD:
+        adjust_budget(camp["adset_id"], current_budget, 0.75, f"Cost/Lead Rs.{cpl:.0f} too high")
         return
 
-    if cps and cps < GOOD_COST_PER_SIGNUP and signups >= MIN_SIGNUPS_TO_SCALE:
-        factor = 1.5 if (ctr >= 1.0 and signups >= 5) else 1.25
-        adjust_budget(camp["adset_id"], current_budget, factor, f"Cost/Signup Rs.{cps:.0f} — scaling up")
+    if cpl and cpl < GOOD_COST_PER_LEAD and leads >= MIN_LEADS_TO_SCALE:
+        factor = 1.5 if (ctr >= 1.0 and leads >= 5) else 1.25
+        adjust_budget(camp["adset_id"], current_budget, factor, f"Cost/Lead Rs.{cpl:.0f} — scaling up")
         return
 
     print("    No changes — performance within acceptable range.")

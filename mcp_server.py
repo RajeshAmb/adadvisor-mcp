@@ -73,7 +73,7 @@ def get_report(date_preset: str = "last_7d") -> str:
     lines = [f"MANGALYA ADS REPORT ({date_preset})", "=" * 50]
     for row in insights:
         spend = float(row.get("spend", 0))
-        signups = _get_action(row.get("actions"), "complete_registration")
+        signups = _get_action(row.get("actions"), "lead")
         cost_per_signup = f"Rs.{spend/signups:.2f}" if signups > 0 else "N/A"
         lines.append(f"\n{row.get('campaign_name')} ({row.get('campaign_id')})")
         lines.append(f"  Impressions : {row.get('impressions', 0)}")
@@ -158,13 +158,16 @@ def resume_adset(adset_id: str) -> str:
 
 # ── Thresholds (matches optimize.py) ───────────────────────────────────────────
 MIN_CTR              = 0.5
-MAX_COST_PER_SIGNUP  = 150
-GOOD_COST_PER_SIGNUP = 50
-MIN_SIGNUPS_TO_SCALE = 3
+MAX_COST_PER_LEAD    = 100
+GOOD_COST_PER_LEAD   = 40
+MIN_LEADS_TO_SCALE   = 3
 
 ADSETS = [
-    {"adset_id": "120265076173980555", "name": "mangalya-03 (Kerala)"},
-    {"adset_id": "120265076175510555", "name": "Mangalya-01 (AP & Telangana)"},
+    {"adset_id": "120265125537550555", "name": "Telugu Parents 45-65 (Lead)"},
+    {"adset_id": "120265125536690555", "name": "Telugu Women 23-33 (Lead)"},
+    {"adset_id": "120265153511970555", "name": "AP Telangana Women 23-33 (Lead v2)"},
+    {"adset_id": "120265153509550555", "name": "Kerala Women 23-33 (Lead)"},
+    {"adset_id": "120265153513430555", "name": "Tamil Nadu Women 23-33 (Lead)"},
 ]
 
 
@@ -203,7 +206,7 @@ def analyze_campaigns(date_preset: str = "last_3d") -> str:
         impressions = int(row.get("impressions", 0))
         spend       = float(row.get("spend", 0))
         ctr         = float(row.get("ctr", 0))
-        signups     = _get_action(row.get("actions"), "complete_registration")
+        signups     = _get_action(row.get("actions"), "lead")
         cps         = spend / signups if signups > 0 else None
 
         lines.append(f"  Impressions   : {impressions}")
@@ -217,9 +220,9 @@ def analyze_campaigns(date_preset: str = "last_3d") -> str:
             flag = "NO_IMPRESSIONS — check ad approval"
         elif ctr < MIN_CTR:
             flag = f"PAUSED_LOW_CTR — CTR {ctr:.2f}% below {MIN_CTR}% threshold"
-        elif cps and cps > MAX_COST_PER_SIGNUP:
-            flag = f"EXPENSIVE — Cost/Signup Rs.{cps:.0f} exceeds Rs.{MAX_COST_PER_SIGNUP} limit"
-        elif cps and cps < GOOD_COST_PER_SIGNUP and signups >= MIN_SIGNUPS_TO_SCALE:
+        elif cps and cps > MAX_COST_PER_LEAD:
+            flag = f"EXPENSIVE — Cost/Signup Rs.{cps:.0f} exceeds Rs.{MAX_COST_PER_LEAD} limit"
+        elif cps and cps < GOOD_COST_PER_LEAD and signups >= MIN_LEADS_TO_SCALE:
             scale = "50%" if (ctr >= 1.0 and signups >= 5) else "25%"
             flag = f"SCALING — Cost/Signup Rs.{cps:.0f} is good, eligible for +{scale} budget increase"
         else:
@@ -264,7 +267,7 @@ def get_recommendations(date_preset: str = "last_3d") -> str:
         impressions = int(row.get("impressions", 0))
         spend       = float(row.get("spend", 0))
         ctr         = float(row.get("ctr", 0))
-        signups     = _get_action(row.get("actions"), "complete_registration")
+        signups     = _get_action(row.get("actions"), "lead")
         cps         = spend / signups if signups > 0 else None
         budget_rs   = current_budget // 100
 
@@ -278,20 +281,20 @@ def get_recommendations(date_preset: str = "last_3d") -> str:
             lines.append(f"  WHY:    CTR is {ctr:.2f}% — below the {MIN_CTR}% minimum.")
             lines.append(f"  NEXT:   Refresh the creative (image/copy) before re-enabling.")
             has_action = True
-        elif cps and cps > MAX_COST_PER_SIGNUP:
+        elif cps and cps > MAX_COST_PER_LEAD:
             new_budget = max(int(budget_rs * 0.75), 100)
             lines.append(f"  ACTION: Reduce budget Rs.{budget_rs} → Rs.{new_budget}/day (-25%).")
-            lines.append(f"  WHY:    Cost/Signup Rs.{cps:.0f} exceeds Rs.{MAX_COST_PER_SIGNUP} limit.")
+            lines.append(f"  WHY:    Cost/Signup Rs.{cps:.0f} exceeds Rs.{MAX_COST_PER_LEAD} limit.")
             lines.append(f"  NEXT:   Monitor for 3 days. If no improvement, review targeting.")
             has_action = True
-        elif cps and cps < GOOD_COST_PER_SIGNUP and signups >= MIN_SIGNUPS_TO_SCALE:
+        elif cps and cps < GOOD_COST_PER_LEAD and signups >= MIN_LEADS_TO_SCALE:
             if ctr >= 1.0 and signups >= 5:
                 factor, label = 1.50, "+50%"
             else:
                 factor, label = 1.25, "+25%"
             new_budget = int(budget_rs * factor)
             lines.append(f"  ACTION: Increase budget Rs.{budget_rs} → Rs.{new_budget}/day ({label}).")
-            lines.append(f"  WHY:    Cost/Signup Rs.{cps:.0f} is well under Rs.{GOOD_COST_PER_SIGNUP}, {signups} signups.")
+            lines.append(f"  WHY:    Cost/Signup Rs.{cps:.0f} is well under Rs.{GOOD_COST_PER_LEAD}, {signups} signups.")
             lines.append(f"  NEXT:   Scale gradually. Reassess in 3 days.")
             has_action = True
         else:
