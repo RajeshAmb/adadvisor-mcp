@@ -132,6 +132,64 @@ def receive_webhook():
     return "OK", 200
 
 
+@app.route("/api/lead", methods=["POST", "OPTIONS"])
+def receive_website_lead():
+    """Receive lead data directly from the Mangalya website on registration."""
+    # CORS preflight
+    if request.method == "OPTIONS":
+        resp = app.make_default_options_response()
+        resp.headers["Access-Control-Allow-Origin"] = "*"
+        resp.headers["Access-Control-Allow-Headers"] = "Content-Type"
+        resp.headers["Access-Control-Allow-Methods"] = "POST"
+        return resp
+
+    payload = request.get_json(silent=True)
+    if not payload:
+        return jsonify({"error": "Bad Request"}), 400
+
+    name = payload.get("name", "").strip()
+    phone = payload.get("phone", "").strip()
+    email = payload.get("email")
+    community = payload.get("community")
+    gender = payload.get("gender")
+    source = payload.get("source", "website")
+
+    if not name:
+        return jsonify({"error": "Name required"}), 400
+
+    logger.info(f"Website lead: {name} ({phone})")
+
+    lead_id = db.add_lead(
+        name=name,
+        phone=phone,
+        email=email,
+        community=community,
+        gender=gender,
+        source=source,
+    )
+
+    if lead_id is None:
+        return jsonify({"status": "duplicate"}), 200
+
+    # Schedule WhatsApp follow-ups
+    if phone:
+        db.schedule_follow_ups(lead_id)
+
+    # Telegram alert
+    send_message(
+        f"<b>WEBSITE SIGNUP</b>\n"
+        f"Name: {name}\n"
+        f"Phone: {phone or 'N/A'}\n"
+        f"Community: {community or 'N/A'}\n"
+        f"Gender: {gender or 'N/A'}\n"
+        f"WhatsApp follow-up: {'scheduled' if phone else 'no phone'}"
+    )
+
+    resp = jsonify({"status": "ok", "lead_id": lead_id})
+    resp.headers["Access-Control-Allow-Origin"] = "*"
+    return resp
+
+
 @app.route("/health", methods=["GET"])
 def health():
     stats = db.get_stats()
