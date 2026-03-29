@@ -203,6 +203,42 @@ def update_ad_status(ad_id, status):
     print(f"Ad {ad_id} set to {status}")
 
 
+def upload_video(video_path):
+    """Upload a video file to Meta Ad Account. Returns video ID."""
+    from facebook_business.adobjects.advideo import AdVideo
+    account = init()
+    video = account.create_ad_video(params={
+        AdVideo.Field.name: os.path.basename(video_path),
+        AdVideo.Field.filepath: video_path,
+    })
+    print(f"Uploaded video: {video.get('id')}")
+    return video.get("id")
+
+
+def create_video_creative(name, page_id, video_id, message, headline,
+                          link, description=""):
+    """Create an ad creative using a video instead of an image."""
+    account = init()
+    creative = account.create_ad_creative(fields=[], params={
+        AdCreative.Field.name: name,
+        AdCreative.Field.object_story_spec: {
+            "page_id": page_id,
+            "video_data": {
+                "video_id": video_id,
+                "message": message,
+                "title": headline,
+                "link_description": description,
+                "call_to_action": {
+                    "type": "SIGN_UP",
+                    "value": {"link": link},
+                },
+            },
+        },
+    })
+    print(f"Created video creative: {creative['id']} — {name}")
+    return creative
+
+
 # ── Insights / Reporting ───────────────────────────────────────────────────────
 
 def get_campaign_insights(campaign_id, date_preset="last_7d"):

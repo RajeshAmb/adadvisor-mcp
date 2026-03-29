@@ -2,4 +2,8 @@
 __pycache__/
 *.pyc
 *.log
-*.json
+data/*.json
+data/*.db
+*.txt
+posters/
+test_branded.jpg

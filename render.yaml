@@ -13,3 +13,24 @@ services:
         sync: false
       - key: META_AD_ACCOUNT_ID
         sync: false
+
+  - type: web
+    name: mangalya-webhook
+    runtime: python
+    buildCommand: pip install -r requirements.txt
+    startCommand: gunicorn webhook_server:app --bind 0.0.0.0:$PORT --workers 2
+    envVars:
+      - key: META_ACCESS_TOKEN
+        sync: false
+      - key: META_APP_ID
+        sync: false
+      - key: META_APP_SECRET
+        sync: false
+      - key: META_AD_ACCOUNT_ID
+        sync: false
+      - key: WEBHOOK_VERIFY_TOKEN
+        sync: false
+      - key: TELEGRAM_BOT_TOKEN
+        sync: false
+      - key: TELEGRAM_CHAT_ID
+        sync: false
